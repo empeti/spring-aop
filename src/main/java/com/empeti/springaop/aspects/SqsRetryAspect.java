@@ -23,22 +23,29 @@ public class SqsRetryAspect {
 
     @Around("@annotation(com.empeti.springaop.annotations.SqsRetry)")
     public void addSqsRetryLogic(ProceedingJoinPoint call) throws Throwable {
-        MethodSignature signature = (MethodSignature) call.getSignature();
-        Method method = signature.getMethod();
-
-        SqsRetry sqsRetry = method.getAnnotation(SqsRetry.class);
-        System.out.println(sqsRetry);
-
         try{
             call.proceed();
             throw new RuntimeException();
         }
         catch (RuntimeException e){
-            SqsProducer producer = BeanFactoryAnnotationUtils.qualifiedBeanOfType(
-                    ctx.getAutowireCapableBeanFactory(), SqsProducer.class, sqsRetry.producer());
+            SqsProducer producer = getProducer(call);
             System.out.println(producer.getName());
             System.out.println("Exception caught");
             System.out.println(e);
         }
+    }
+
+    private SqsProducer getProducer(ProceedingJoinPoint call) {
+        return BeanFactoryAnnotationUtils.qualifiedBeanOfType(
+                ctx.getAutowireCapableBeanFactory(), SqsProducer.class, getProducerName(call));
+    }
+
+    private String getProducerName(ProceedingJoinPoint call) {
+        MethodSignature signature = (MethodSignature) call.getSignature();
+        Method method = signature.getMethod();
+
+        SqsRetry sqsRetry = method.getAnnotation(SqsRetry.class);
+        System.out.println(sqsRetry);
+        return sqsRetry.producer();
     }
 }
